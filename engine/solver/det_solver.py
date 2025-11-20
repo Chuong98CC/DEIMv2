@@ -17,9 +17,18 @@ from ..misc import dist_utils, stats
 from ._solver import BaseSolver
 from .det_engine import train_one_epoch, evaluate
 from ..optim.lr_scheduler import FlatCosineLRScheduler
-
+from rfdetr.util.metrics import MetricsWandBSink
 
 class DetSolver(BaseSolver):
+    def _setup(self):
+        super()._setup()
+        wandb_cfg = self.cfg.yaml_cfg.get('wandb', {})
+        self.wandb_enabled = wandb_cfg.get('enabled', False) and dist_utils.is_main_process()
+        if self.wandb_enabled:
+            print("### Using Weights & Biases for logging ###")
+            self.metrics_wandb_sink = MetricsWandBSink(self.cfg.output_dir, 
+                                                       wandb_cfg.get('project', None),
+                                                       wandb_cfg.get('run', None))
 
     def fit(self, ):
         self.train()
@@ -112,7 +121,7 @@ class DetSolver(BaseSolver):
                     dist_utils.save_on_master(self.state_dict(), checkpoint_path)
 
             module = self.ema.module if self.ema else self.model
-            test_stats, coco_evaluator = evaluate(
+            test_stats, coco_evaluator, loss_test = evaluate(
                 module,
                 self.criterion,
                 self.postprocessor,
@@ -120,7 +129,6 @@ class DetSolver(BaseSolver):
                 self.evaluator,
                 self.device
             )
-
             for k in test_stats:
                 if self.writer and dist_utils.is_main_process():
                     for i, v in enumerate(test_stats[k]):
@@ -164,6 +172,7 @@ class DetSolver(BaseSolver):
             log_stats = {
                 **{f'train_{k}': v for k, v in train_stats.items()},
                 **{f'test_{k}': v for k, v in test_stats.items()},
+                'loss_test': loss_test,
                 'epoch': epoch,
                 'n_parameters': n_parameters
             }
@@ -182,10 +191,18 @@ class DetSolver(BaseSolver):
                         for name in filenames:
                             torch.save(coco_evaluator.coco_eval["bbox"].eval,
                                     self.output_dir / "eval" / name)
-
+            if self.wandb_enabled:
+                self.metrics_wandb_sink.update({
+                    'epoch': epoch,
+                    'train_lr': train_stats['lr'],
+                    'train_loss': train_stats['loss'],
+                    'test_loss': loss_test,
+                    'test_coco_eval_bbox': test_stats['coco_eval_bbox'],
+                })
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
+        self.metrics_wandb_sink.close() if self.wandb_enabled else None
 
 
     def val(self, ):

@@ -1,0 +1,45 @@
+task: detection
+
+evaluator:
+  type: CocoEvaluator
+  iou_types: ['bbox', ]
+
+num_classes: 7 # your dataset classes
+remap_mscoco_category: False
+
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    # img_folder: /data/murata_phase2/thai_vehicle_yolo/images/
+    # ann_file: /data/murata_phase2/thai_vehicle_yolo/thai_vehicle_yolo.json
+    img_folder: /data/murata/kaggle_videos/
+    ann_file: /data/murata/kaggle_videos/annotations/instances_default.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+
+  shuffle: True
+  num_workers: 4
+  drop_last: True
+  collate_fn:
+    type: BatchImageCollateFunction
+
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: /data/murata/kaggle_videos/
+    ann_file: /data/murata/kaggle_videos/annotations/instances_default.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: False
+  num_workers: 4
+  drop_last: False
+  collate_fn:
+    type: BatchImageCollateFunction
+
+

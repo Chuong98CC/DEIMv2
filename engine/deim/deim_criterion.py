@@ -406,6 +406,42 @@ class DEIMCriterion(nn.Module):
         losses = {k:torch.nan_to_num(v, nan=0.0) for k, v in losses.items()}
         return losses
 
+    @torch.no_grad()
+    def evaluate(self, outputs, targets, epoch=0, **kwargs):
+        """ This performs the loss computation.
+        Parameters:
+             outputs: dict of tensors, see the output specification of the model for the format
+             targets: list of dicts, such that len(targets) == batch_size.
+                      The expected keys in each dict depends on the losses applied, see each loss' doc
+        """
+        outputs_without_aux = {k: v for k, v in outputs.items() if 'aux' not in k}
+
+        # Retrieve the matching between the outputs of the last layer and the targets
+        indices = self.matcher(outputs_without_aux, targets, epoch=epoch)['indices']
+        self._clear_cache()
+
+        # Compute the average number of target boxes accross all nodes, for normalization purposes
+        num_boxes = sum(len(t["labels"]) for t in targets)
+        num_boxes = torch.as_tensor([num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device)
+        if is_dist_available_and_initialized():
+            torch.distributed.all_reduce(num_boxes)
+        num_boxes = torch.clamp(num_boxes / get_world_size(), min=1).item()
+
+        # Compute all the requested losses, main loss
+        losses = {}
+        for loss in self.losses:
+            # use_uni_set = self.use_uni_set and (loss in ['boxes', 'local'])
+            indices_in = indices
+            num_boxes_in = num_boxes
+            meta = self.get_loss_meta_info(loss, outputs, targets, indices_in)
+            l_dict = self.get_loss(loss, outputs, targets, indices_in, num_boxes_in, **meta)
+            l_dict = {k: l_dict[k] * self.weight_dict[k] for k in l_dict if k in self.weight_dict}
+            losses.update(l_dict)
+
+        # For debugging Objects365 pre-train.
+        losses = {k:torch.nan_to_num(v, nan=0.0) for k, v in losses.items()}
+        return losses
+
     def get_loss_meta_info(self, loss, outputs, targets, indices):
         if self.boxes_weight_format is None:
             return {}

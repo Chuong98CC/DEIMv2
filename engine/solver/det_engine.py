@@ -136,13 +136,17 @@ def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, postprocessor, 
     iou_types = coco_evaluator.iou_types
     # coco_evaluator = CocoEvaluator(base_ds, iou_types)
     # coco_evaluator.coco_eval[iou_types[0]].params.iouThrs = [0, 0.1, 0.5, 0.75]
-
+    loss =0.0
+    n_samples=1
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        outputs = model(samples)
-
+        # outputs = model(samples)
+        outputs = model(samples, targets=targets)
+        loss_dict = criterion.evaluate(outputs, targets)
+        loss += sum(loss_dict.values())
+        n_samples += len(samples)
         orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
 
         results = postprocessor(outputs, orig_target_sizes)
@@ -173,5 +177,4 @@ def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, postprocessor, 
             stats['coco_eval_bbox'] = coco_evaluator.coco_eval['bbox'].stats.tolist()
         if 'segm' in iou_types:
             stats['coco_eval_masks'] = coco_evaluator.coco_eval['segm'].stats.tolist()
-
-    return stats, coco_evaluator
+    return stats, coco_evaluator, loss.item() / n_samples

@@ -1,0 +1,68 @@
+__include__: [
+  '../dataset/traffic.yml',
+  '../runtime.yml',
+  '../base/dataloader.yml',
+  '../base/optimizer.yml',
+  '../base/deimv2_hgnetv2_n.yml'
+]
+
+print_freq: 10
+output_dir: ./outputs/deimv2_hgnetv2_n_thai_vehicle
+
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.0004
+    -
+      params: '^(?=.*backbone)(?=.*norm|bn).*$'
+      lr: 0.0004
+      weight_decay: 0.
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn|bias)).*$'
+      weight_decay: 0.
+
+  lr: 0.0008
+  betas: [0.9, 0.999]
+  weight_decay: 0.0001
+
+
+# Increase to search for the optimal ema
+epoches: 32 #  Total epochs: 20 for training + EMA  for 4n = 12. n refers to the model size in the matched config.
+
+## Our LR-Scheduler
+flat_epoch: 14    # 4 + epoch // 2, e.g., 40 = 4 + 72 / 2
+no_aug_epoch: 12
+lr_gamma: 1.0
+
+## Our DataAug
+train_dataloader: 
+  dataset: 
+    transforms:
+      policy:
+          epoch: [4, 14, 20]   # [start_epoch, flat_epoch, epoches - no_aug_epoch]
+
+  collate_fn:
+    ema_restart_decay: 0.9999
+    base_size_repeat: ~
+    copyblend_prob: 0.4
+    area_threshold: 100
+    num_objects: 3
+    with_expand: True
+    expand_ratios: [0.1, 0.25]
+    mixup_epochs: [4, 14]  # [start_epoch, flat_epoch]
+    stop_epoch: 20  # epoches - no_aug_epoch
+    copyblend_epochs: [4, 20]  # [start_epoch, epoches - no_aug_epoch]
+
+DEIMCriterion:
+  matcher:
+    # new matcher
+    change_matcher: True
+    iou_order_alpha: 4.0
+    matcher_change_epoch: 136
+
+wandb:
+  enabled: True 
+  project: murata
+  run: deimv2_n_640x640
