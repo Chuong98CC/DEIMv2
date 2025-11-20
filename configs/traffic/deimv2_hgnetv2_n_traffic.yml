@@ -29,10 +29,10 @@ optimizer:
 
 
 # Increase to search for the optimal ema
-epoches: 32 #  Total epochs: 20 for training + EMA  for 4n = 12. n refers to the model size in the matched config.
+epoches: 42 #  Total epochs: 30 for training + EMA  for 4n = 12. n refers to the model size in the matched config.
 
 ## Our LR-Scheduler
-flat_epoch: 14    # 4 + epoch // 2, e.g., 40 = 4 + 72 / 2
+flat_epoch: 19    # 4 + epoch // 2, e.g., 19 = 4 + 30 / 2
 no_aug_epoch: 12
 lr_gamma: 1.0
 
@@ -41,7 +41,7 @@ train_dataloader:
   dataset: 
     transforms:
       policy:
-          epoch: [4, 14, 20]   # [start_epoch, flat_epoch, epoches - no_aug_epoch]
+          epoch: [1, 19, 30]   # [start_epoch, flat_epoch, epoches - no_aug_epoch]
 
   collate_fn:
     ema_restart_decay: 0.9999
@@ -51,16 +51,16 @@ train_dataloader:
     num_objects: 3
     with_expand: True
     expand_ratios: [0.1, 0.25]
-    mixup_epochs: [4, 14]  # [start_epoch, flat_epoch]
+    mixup_epochs: [1, 19]  # [start_epoch, flat_epoch]
     stop_epoch: 20  # epoches - no_aug_epoch
-    copyblend_epochs: [4, 20]  # [start_epoch, epoches - no_aug_epoch]
+    copyblend_epochs: [1, 30]  # [start_epoch, epoches - no_aug_epoch]
 
 DEIMCriterion:
   matcher:
     # new matcher
     change_matcher: True
     iou_order_alpha: 4.0
-    matcher_change_epoch: 136
+    matcher_change_epoch: 20
 
 wandb:
   enabled: True 

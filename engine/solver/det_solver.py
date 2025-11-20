@@ -121,7 +121,7 @@ class DetSolver(BaseSolver):
                     dist_utils.save_on_master(self.state_dict(), checkpoint_path)
 
             module = self.ema.module if self.ema else self.model
-            test_stats, coco_evaluator, loss_test = evaluate(
+            test_stats, coco_evaluator = evaluate(
                 module,
                 self.criterion,
                 self.postprocessor,
@@ -130,6 +130,9 @@ class DetSolver(BaseSolver):
                 self.device
             )
             for k in test_stats:
+                if 'loss' in k:
+                    self.writer.add_scalar(f'Test/{k}', test_stats[k], epoch)
+                    continue
                 if self.writer and dist_utils.is_main_process():
                     for i, v in enumerate(test_stats[k]):
                         self.writer.add_scalar(f'Test/{k}_{i}'.format(k), v, epoch)
@@ -172,7 +175,7 @@ class DetSolver(BaseSolver):
             log_stats = {
                 **{f'train_{k}': v for k, v in train_stats.items()},
                 **{f'test_{k}': v for k, v in test_stats.items()},
-                'loss_test': loss_test,
+                'loss_test': test_stats['loss'],
                 'epoch': epoch,
                 'n_parameters': n_parameters
             }
@@ -196,7 +199,7 @@ class DetSolver(BaseSolver):
                     'epoch': epoch,
                     'train_lr': train_stats['lr'],
                     'train_loss': train_stats['loss'],
-                    'test_loss': loss_test,
+                    'test_loss': test_stats['loss'],
                     'test_coco_eval_bbox': test_stats['coco_eval_bbox'],
                 })
         total_time = time.time() - start_time

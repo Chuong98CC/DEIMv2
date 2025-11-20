@@ -13,8 +13,8 @@ train_dataloader:
     type: CocoDetection
     # img_folder: /data/murata_phase2/thai_vehicle_yolo/images/
     # ann_file: /data/murata_phase2/thai_vehicle_yolo/thai_vehicle_yolo.json
-    img_folder: /data/murata/kaggle_videos/
-    ann_file: /data/murata/kaggle_videos/annotations/instances_default.json
+    img_folder: /data/murata/kaggle_videos/SampleVideo_LowQuality_frame/images 
+    ann_file: /data/murata/kaggle_videos/SampleVideo_LowQuality_frame/annotations/instances_default.json
     return_masks: False
     transforms:
       type: Compose
@@ -30,8 +30,8 @@ val_dataloader:
   type: DataLoader
   dataset:
     type: CocoDetection
-    img_folder: /data/murata/kaggle_videos/
-    ann_file: /data/murata/kaggle_videos/annotations/instances_default.json
+    img_folder: /data/murata/kaggle_videos/SampleVideo_LowQuality_frame/images 
+    ann_file: /data/murata/kaggle_videos/SampleVideo_LowQuality_frame/annotations/instances_default.json
     return_masks: False
     transforms:
       type: Compose

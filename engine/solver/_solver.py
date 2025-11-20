@@ -169,7 +169,6 @@ class BaseSolver(object):
             state = torch.load(path, map_location='cpu')
 
         module = dist_utils.de_parallel(self.model)
-
         # Load the appropriate state dict
         if 'ema' in state:
             pretrain_state_dict = state['ema']['module']
@@ -177,14 +176,15 @@ class BaseSolver(object):
             pretrain_state_dict = state['model']
 
         # Adjust head parameters between datasets
-        try:
-            adjusted_state_dict = self._adjust_head_parameters(module.state_dict(), pretrain_state_dict)
-            stat, infos = self._matched_state(module.state_dict(), adjusted_state_dict)
-        except Exception:
-            stat, infos = self._matched_state(module.state_dict(), pretrain_state_dict)
-
+        # try:
+        # adjusted_state_dict = self._adjust_head_parameters_obj3652coco(module.state_dict(), pretrain_state_dict)
+        # stat, infos = self._matched_state(module.state_dict(), adjusted_state_dict)
+        # except Exception:
+        stat, infos = self._matched_state(module.state_dict(), pretrain_state_dict)
         module.load_state_dict(stat, strict=False)
-        print(f'Load model.state_dict, {infos}')
+        print('-------Load pretrained weights for tuning-----------')
+        for k,v in infos.items():
+            print(f'{k}: {v}')
 
     @staticmethod
     def _matched_state(state: Dict[str, torch.Tensor], params: Dict[str, torch.Tensor]):
@@ -202,7 +202,7 @@ class BaseSolver(object):
 
         return matched_state, {'missed': missed_list, 'unmatched': unmatched_list}
 
-    def _adjust_head_parameters(self, cur_state_dict, pretrain_state_dict):
+    def _adjust_head_parameters_obj3652coco(self, cur_state_dict, pretrain_state_dict):
         """Adjust head parameters between datasets."""
         # List of parameters to adjust
         if pretrain_state_dict['decoder.denoising_class_embed.weight'].size() != \
@@ -231,7 +231,7 @@ class BaseSolver(object):
                     print(f"Cannot adjust parameter '{param_name}' due to size mismatch.")
 
         return pretrain_state_dict
-
+    
     def map_class_weights(self, cur_tensor, pretrain_tensor):
         """Map class weights from pretrain model to current model based on class IDs."""
         if pretrain_tensor.size() == cur_tensor.size():

@@ -170,11 +170,11 @@ def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, postprocessor, 
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
 
-    stats = {}
+    stats = {'loss': loss.item() / n_samples}
     # stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
     if coco_evaluator is not None:
         if 'bbox' in iou_types:
             stats['coco_eval_bbox'] = coco_evaluator.coco_eval['bbox'].stats.tolist()
         if 'segm' in iou_types:
             stats['coco_eval_masks'] = coco_evaluator.coco_eval['segm'].stats.tolist()
-    return stats, coco_evaluator, loss.item() / n_samples
+    return stats, coco_evaluator
