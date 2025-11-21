@@ -37,6 +37,7 @@ no_aug_epoch: 12
 lr_gamma: 1.0
 
 ## Our DataAug
+eval_spatial_size: [640, 640]
 train_dataloader: 
   dataset: 
     transforms:
