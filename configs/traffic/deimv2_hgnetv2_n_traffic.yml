@@ -6,7 +6,7 @@ __include__: [
   '../base/deimv2_hgnetv2_n.yml'
 ]
 
-print_freq: 10
+# print_freq: 10
 output_dir: ./outputs/deimv2_hgnetv2_n_thai_vehicle
 
 optimizer:
@@ -27,12 +27,12 @@ optimizer:
   betas: [0.9, 0.999]
   weight_decay: 0.0001
 
-
 # Increase to search for the optimal ema
-epoches: 42 #  Total epochs: 30 for training + EMA  for 4n = 12. n refers to the model size in the matched config.
+epoches: 160 # 148 + 12
 
 ## Our LR-Scheduler
-flat_epoch: 19    # 4 + epoch // 2, e.g., 19 = 4 + 30 / 2
+warmup_iter: 10
+flat_epoch: 78    # 4 + epoch // 2, e.g., 78 = 4 + 148 / 2
 no_aug_epoch: 12
 lr_gamma: 1.0
 
@@ -40,27 +40,46 @@ lr_gamma: 1.0
 train_dataloader: 
   dataset: 
     transforms:
+      ops:
+        #  Especially for Mosaic augmentation, it is recommended that output_size = input_size / 2.
+        - {type: Mosaic, output_size: 640, rotation_range: 5, translation_range: [0.1, 0.1], scaling_range: [0.75, 1.25],
+           probability: 1.0, fill_value: 0, use_cache: True, max_cached_images: 50, random_pop: False}
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0, side_range: [1.0, 1.25]}
+        - {type: RandomIoUCrop, p: 0.8, min_scale: 0.8, min_aspect_ratio: 0.75, max_aspect_ratio: 1.25}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: RandomHorizontalFlip}
+        - {type: Resize, size: [1280, 1280], }
+        - {type: SanitizeBoundingBoxes, min_size: 10}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
       policy:
-          epoch: [1, 19, 30]   # [start_epoch, flat_epoch, epoches - no_aug_epoch]
+        name: stop_epoch
+        epoch: 148 # stop the following ops after this epoch 
+        ops: ['RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop']
+
 
   collate_fn:
     ema_restart_decay: 0.9999
+    # base_size: 960
     base_size_repeat: ~
-    copyblend_prob: 0.4
-    area_threshold: 100
-    num_objects: 3
+    mixup_prob: 0.0
+    copyblend_prob: 1.0
+    area_threshold: 2500
+    num_objects: 15
     with_expand: True
     expand_ratios: [0.1, 0.25]
-    mixup_epochs: [1, 19]  # [start_epoch, flat_epoch]
+    mixup_epochs: [0, 0]  # [start_epoch, flat_epoch]
+    copyblend_epochs: [0, 2]  # [start_epoch, epoches - no_aug_epoch]
     stop_epoch: 20  # epoches - no_aug_epoch
-    copyblend_epochs: [1, 30]  # [start_epoch, epoches - no_aug_epoch]
+    data_vis: True
 
 DEIMCriterion:
   matcher:
     # new matcher
     change_matcher: True
     iou_order_alpha: 4.0
-    matcher_change_epoch: 20
+    matcher_change_epoch: 136
 
 wandb:
   enabled: True 

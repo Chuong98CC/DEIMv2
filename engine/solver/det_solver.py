@@ -197,7 +197,7 @@ class DetSolver(BaseSolver):
             if self.wandb_enabled:
                 self.metrics_wandb_sink.update({
                     'epoch': epoch,
-                    'train_lr': train_stats['lr'],
+                    'lr': train_stats['lr'],
                     'train_loss': train_stats['loss'],
                     'test_loss': test_stats['loss'],
                     'test_coco_eval_bbox': test_stats['coco_eval_bbox'],
@@ -206,7 +206,6 @@ class DetSolver(BaseSolver):
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
         self.metrics_wandb_sink.close() if self.wandb_enabled else None
-
 
     def val(self, ):
         self.eval()

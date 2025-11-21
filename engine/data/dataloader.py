@@ -166,7 +166,7 @@ class BatchImageCollateFunction(BaseCollateFunction):
             print(f"     ### Attention --- Mixup is closed after epoch@ {self.epoch} ###")
             self.print_info_flag = False
 
-        MixUp_flag, CopyBlend_flag = False, False
+        # MixUp_flag, CopyBlend_flag = False, False
         beta = round(random.uniform(0.45, 0.55), 6)
         # Apply Mixup if within specified epoch range and probability threshold
         if random.random() < self.mixup_prob and self.mixup_epochs[0] <= self.epoch < self.mixup_epochs[-1]:
@@ -199,7 +199,7 @@ class BatchImageCollateFunction(BaseCollateFunction):
                 print(f"     ### Attention --- CopyBlend closed after epoch@ {self.epoch} ###")
                 self.print_copyblend_flag = False
 
-            CopyBlend_flag = True
+            # CopyBlend_flag = True
             objects_pool = defaultdict(list)
             img_height, img_width = images[0].shape[-2:]
 
@@ -326,21 +326,26 @@ class BatchImageCollateFunction(BaseCollateFunction):
 
             images, targets = updated_images, updated_targets
 
-            if self.data_vis and CopyBlend_flag:
-                for i in range(len(updated_targets)):
-                    image_tensor = images[i]
-                    if image_tensor.min() < 0:  # use normalization
-                        image_tensor = image_tensor * torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1) \
-                            + torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
-                    image_tensor_uint8 = (image_tensor * 255).type(torch.uint8)
-                    image_numpy = image_tensor_uint8.numpy().transpose((1, 2, 0))
-                    pilImage = Image.fromarray(image_numpy)
-                    draw = ImageDraw.Draw(pilImage)
-                    print('mix_vis:', i, 'boxes.len=', len(updated_targets[i]['boxes']))
-                    for box in updated_targets[i]['boxes']:
-                        draw.rectangle([int(box[0]*640 - (box[2]*640)/2), int(box[1]*640 - (box[3]*640)/2), 
-                                        int(box[0]*640 + (box[2]*640)/2), int(box[1]*640 + (box[3]*640)/2)], outline=(255,255,0))
-                    pilImage.save(self.vis_save + str(i) + "_"+ str(len(updated_targets[i]['boxes'])) +'_out.jpg')
+            # if self.data_vis and CopyBlend_flag:
+        
+        if self.data_vis:
+            for i in range(len(targets)):
+                image_tensor = images[i]
+                if image_tensor.min() < 0:  # use normalization
+                    image_tensor = image_tensor * torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1) \
+                        + torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+                image_tensor_uint8 = (image_tensor * 255).type(torch.uint8)
+                image_numpy = image_tensor_uint8.numpy().transpose((1, 2, 0))
+                pilImage = Image.fromarray(image_numpy)
+                draw = ImageDraw.Draw(pilImage)
+                # print('mix_vis:', i, 'boxes.len=', len(updated_targets[i]['boxes']))
+                img_size = pilImage.size[0]
+                # img_size = self.base_size 
+                # img_size = 960
+                for box in targets[i]['boxes']:
+                    draw.rectangle([int((box[0] - box[2]/2)*img_size), int((box[1] - box[3]/2)*img_size), 
+                                    int((box[0] + box[2]/2)*img_size), int((box[1] + box[3]/2)*img_size)], outline=(255,255,0))
+                pilImage.save(self.vis_save + f'epoch{self.epoch}_' + str(i) + "_"+ str(len(targets[i]['boxes'])) +'.jpg')
 
         return images, targets
 

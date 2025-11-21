@@ -9,7 +9,20 @@ import atexit
 from ..misc import dist_utils
 from ..core import BaseConfig
 
-
+COCO_classes = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+               'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
+               'stop sign', 'parking meter', 'bench', 'wild bird', 'cat', 'dog',
+               'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+               'backpack', 'umbrella', 'handbag/satchel', 'tie', 'luggage', 'frisbee',
+               'skating and skiing shoes', 'snowboard', 'baseball', 'kite', 'baseball bat',
+               'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+               'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl/basin',
+               'banana', 'apple', 'sandwich', 'orange/tangerine', 'broccoli', 'carrot',
+               'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+               'potted plant', 'bed', 'dinning table', 'toilet', 'moniter/tv', 'laptop',
+               'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
+               'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
+               'vase', 'scissors', 'stuffed toy', 'hair dryer', 'toothbrush']
 def to(m: nn.Module, device: str):
     if m is None:
         return None
@@ -36,6 +49,7 @@ class BaseSolver(object):
             50, 25, 75, 98, 153, 37, 73, 115, 132, 106, 61, 163, 134, 277, 81, 133, 18, 94, 30,
             169, 70, 328, 226
         ]
+
     def _setup(self):
         """Avoid instantiating unnecessary classes"""
         cfg = self.cfg
@@ -97,6 +111,17 @@ class BaseSolver(object):
             print(f'Resume checkpoint from {self.cfg.resume}')
             self.load_resume_state(self.cfg.resume)
 
+    def visualize_data_augmentation(self, num_batches=1):
+        train_dataloader = dist_utils.warp_loader(
+            self.cfg.train_dataloader, shuffle=self.cfg.train_dataloader.shuffle
+        )
+        # for i in range(num_batches):
+        # batch = next(iter(train_dataloader))
+        for batch in train_dataloader:
+            num_batches -= 1
+            if num_batches == 0:
+                break
+            
     def eval(self):
         self._setup()
 
@@ -177,10 +202,22 @@ class BaseSolver(object):
 
         # Adjust head parameters between datasets
         # try:
-        # adjusted_state_dict = self._adjust_head_parameters_obj3652coco(module.state_dict(), pretrain_state_dict)
-        # stat, infos = self._matched_state(module.state_dict(), adjusted_state_dict)
+        coco_ids_map=self.cfg.yaml_cfg.get('coco_ids_map', None)
+        if coco_ids_map is not None:
+            class_ids_map = {}  
+            for kmap in coco_ids_map:
+                k, coco_class = kmap.split(':')
+                if coco_class not in COCO_classes:
+                    raise ValueError(f'Invalid coco class name: {coco_class}')
+                k=int(k)
+                coco_idx = COCO_classes.index(coco_class)
+                class_ids_map[k] = coco_idx
+        else:
+            class_ids_map = None
+        adjusted_state_dict = self._adjust_head_parameters(module.state_dict(), pretrain_state_dict, class_ids_map=class_ids_map)
+        stat, infos = self._matched_state(module.state_dict(), adjusted_state_dict)
         # except Exception:
-        stat, infos = self._matched_state(module.state_dict(), pretrain_state_dict)
+        # stat, infos = self._matched_state(module.state_dict(), pretrain_state_dict)
         module.load_state_dict(stat, strict=False)
         print('-------Load pretrained weights for tuning-----------')
         for k,v in infos.items():
@@ -202,11 +239,13 @@ class BaseSolver(object):
 
         return matched_state, {'missed': missed_list, 'unmatched': unmatched_list}
 
-    def _adjust_head_parameters_obj3652coco(self, cur_state_dict, pretrain_state_dict):
+    def _adjust_head_parameters(self, cur_state_dict, pretrain_state_dict, class_ids_map=None):
         """Adjust head parameters between datasets."""
         # List of parameters to adjust
-        if pretrain_state_dict['decoder.denoising_class_embed.weight'].size() != \
+        if pretrain_state_dict['decoder.denoising_class_embed.weight'].size() == \
                 cur_state_dict['decoder.denoising_class_embed.weight'].size():
+            return pretrain_state_dict
+        else:
             del pretrain_state_dict['decoder.denoising_class_embed.weight']
 
         head_param_names = [
@@ -223,7 +262,7 @@ class BaseSolver(object):
             if param_name in cur_state_dict and param_name in pretrain_state_dict:
                 cur_tensor = cur_state_dict[param_name]
                 pretrain_tensor = pretrain_state_dict[param_name]
-                adjusted_tensor = self.map_class_weights(cur_tensor, pretrain_tensor)
+                adjusted_tensor = self.map_class_weights(cur_tensor, pretrain_tensor, class_ids_map)
                 if adjusted_tensor is not None:
                     pretrain_state_dict[param_name] = adjusted_tensor
                     adjusted_params.append(param_name)
@@ -232,7 +271,7 @@ class BaseSolver(object):
 
         return pretrain_state_dict
     
-    def map_class_weights(self, cur_tensor, pretrain_tensor):
+    def map_class_weights(self, cur_tensor, pretrain_tensor, class_ids_map=None):
         """Map class weights from pretrain model to current model based on class IDs."""
         if pretrain_tensor.size() == cur_tensor.size():
             return pretrain_tensor
@@ -240,15 +279,21 @@ class BaseSolver(object):
         adjusted_tensor = cur_tensor.clone()
         adjusted_tensor.requires_grad = False
 
-        if pretrain_tensor.size() > cur_tensor.size():
-            for coco_id, obj_id in enumerate(self.obj365_ids):
-                adjusted_tensor[coco_id] = pretrain_tensor[obj_id+1]
+        if class_ids_map is None:
+            # use default obj365_ids mapping
+            if pretrain_tensor.size() > cur_tensor.size():
+                for coco_id, obj_id in enumerate(self.obj365_ids):
+                    adjusted_tensor[coco_id] = pretrain_tensor[obj_id+1]
+            else:
+                for coco_id, obj_id in enumerate(self.obj365_ids):
+                    adjusted_tensor[obj_id+1] = pretrain_tensor[coco_id]
         else:
-            for coco_id, obj_id in enumerate(self.obj365_ids):
-                adjusted_tensor[obj_id+1] = pretrain_tensor[coco_id]
+            # use provided coco_ids_map
+            for cur_id, pre_id in class_ids_map.items():
+                adjusted_tensor[cur_id] = pretrain_tensor[pre_id]
 
         return adjusted_tensor
-
+    
     def fit(self):
         raise NotImplementedError('')
 

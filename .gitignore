@@ -142,3 +142,4 @@ dmypy.json
 *.zip
 *.html
 .DS_Store
+vis_dataset/
