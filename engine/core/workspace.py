@@ -165,9 +165,38 @@ def create(type_or_name, global_cfg=GLOBAL_CONFIG, **kwargs):
             name = _cfg.pop('type') # pop extra key (`type` from _k)
             module_kwargs[k] = create(name, global_cfg)
 
+#         elif isinstance(_k, list):
+#             build_items = []
+#             # breakpoint()
+#             # if k == 'datasets':
+#             #     transform = module_kwargs.pop('transforms', None)
+#             #     if transform is not None:
+#             #         for item in _k:
+#             #             if 'transforms' not in item:
+#             #                 item['transforms'] = transform
+#             for i, item in enumerate(_k):
+#                 if not isinstance(item, dict):
+#                     raise ValueError(f'Inject list only support dict style, but got {type(item)}')
+# 
+#                 if 'type' not in item.keys():
+#                     raise ValueError('Missing inject for `type` style.')
+# 
+#                 _type = str(item['type'])
+#                 if _type not in global_cfg:
+#                     raise ValueError(f'Missing {_type} in inspect stage.')
+# 
+#                 _cfg: dict = global_cfg[_type]
+#                 # clean args
+#                 _keys = [k for k in _cfg.keys() if not k.startswith('_')]
+#                 for _arg in _keys:
+#                     del _cfg[_arg]
+#                 _cfg.update(_cfg['_kwargs']) # restore default values
+#                 _cfg.update(item) # load config args
+#                 name = _cfg.pop('type') # pop extra key (`type` from item)
+#                 build_items.append(create(name, global_cfg))
+#             module_kwargs[k] = build_items
         else:
             raise ValueError(f'Inject does not support {_k}')
-
     module_kwargs = {k: v for k, v in module_kwargs.items() if not k.startswith('_')}
 
     # extra_args = set(module_kwargs.keys()) - set(arg_names)

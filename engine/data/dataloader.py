@@ -339,12 +339,12 @@ class BatchImageCollateFunction(BaseCollateFunction):
                 pilImage = Image.fromarray(image_numpy)
                 draw = ImageDraw.Draw(pilImage)
                 # print('mix_vis:', i, 'boxes.len=', len(updated_targets[i]['boxes']))
-                img_size = pilImage.size[0]
+                img_W,img_H = pilImage.size
                 # img_size = self.base_size 
                 # img_size = 960
                 for box in targets[i]['boxes']:
-                    draw.rectangle([int((box[0] - box[2]/2)*img_size), int((box[1] - box[3]/2)*img_size), 
-                                    int((box[0] + box[2]/2)*img_size), int((box[1] + box[3]/2)*img_size)], outline=(255,255,0))
+                    draw.rectangle([int((box[0] - box[2]/2)*img_W), int((box[1] - box[3]/2)*img_H), 
+                                    int((box[0] + box[2]/2)*img_W), int((box[1] + box[3]/2)*img_H)], outline=(255,255,0))
                 pilImage.save(self.vis_save + f'epoch{self.epoch}_' + str(i) + "_"+ str(len(targets[i]['boxes'])) +'.jpg')
 
         return images, targets

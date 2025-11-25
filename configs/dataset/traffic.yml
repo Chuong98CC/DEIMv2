@@ -7,19 +7,20 @@ evaluator:
 num_classes: 8 # your dataset classes +1
 remap_mscoco_category: False
 
-eval_spatial_size: [640, 640]
 train_dataloader:
   type: DataLoader
   dataset:
-    type: CocoDetection
-    # img_folder: /data/murata_phase2/thai_vehicle_yolo/images/
-    # ann_file: /data/murata_phase2/thai_vehicle_yolo/thai_vehicle_yolo.json
-    img_folder: /data/murata/kaggle_videos/SampleVideo_LowQuality_frame/images 
-    ann_file: /data/murata/kaggle_videos/SampleVideo_LowQuality_frame/annotations/instances_default.json
+    type: ConcatCocoDataset
+    datasets: 
+    - img_folder: /data/murata_phase2/thai_vehicle_yolo/images/
+      ann_file: /data/murata_phase2/thai_vehicle_yolo/thai_vehicle_yolo.json
+    - img_folder: /data/murata_phase2/thai_vehicle_yolo/images/
+      ann_file: /data/murata_phase2/thai_vehicle_yolo/thai_vehicle_yolo.json
     return_masks: False
     transforms:
       type: Compose
       ops: ~
+
 
   shuffle: True
   num_workers: 4

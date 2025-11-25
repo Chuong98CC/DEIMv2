@@ -17,7 +17,7 @@ from ..misc import dist_utils, stats
 from ._solver import BaseSolver
 from .det_engine import train_one_epoch, evaluate
 from ..optim.lr_scheduler import FlatCosineLRScheduler
-from rfdetr.util.metrics import MetricsWandBSink
+from ..misc.logger import MetricsWandBSink
 
 class DetSolver(BaseSolver):
     def _setup(self):
@@ -34,13 +34,13 @@ class DetSolver(BaseSolver):
         self.train()
         args = self.cfg
 
-        n_parameters, model_stats = stats(self.cfg)
-        print(model_stats)
-        print("-"*42 + "Start training" + "-"*43)
-
-        for i, (name, param) in enumerate(self.model.named_parameters()):
-            if i in [194, 195]:
-                print(f"Index {i}: {name} - requires_grad: {param.requires_grad}")
+#         n_parameters, model_stats = stats(self.cfg)
+#         print(model_stats)
+#         print("-"*42 + "Start training" + "-"*43)
+# 
+#         for i, (name, param) in enumerate(self.model.named_parameters()):
+#             if i in [194, 195]:
+#                 print(f"Index {i}: {name} - requires_grad: {param.requires_grad}")
 
         self.self_lr_scheduler = False
         if args.lrsheduler is not None:

@@ -9,7 +9,6 @@ HGNetv2:
   freeze_at: -1
   freeze_norm: False
   use_lab: True
-
 HybridEncoder:
   in_channels: [512, 1024]
   feat_strides: [16, 32]
@@ -43,7 +42,7 @@ DEIMTransformer:
 epoches: 160 # 148 + 12
 
 ## Our LR-Scheduler
-flat_epoch: 7800    # 4 + epoch // 2, e.g., 40 = 4 + 72 / 2
+flat_epoch: 78    # 4 + epoch // 2, e.g., 40 = 4 + 72 / 2
 no_aug_epoch: 12
 lr_gamma: 1.0
 
