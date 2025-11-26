@@ -345,7 +345,8 @@ class BatchImageCollateFunction(BaseCollateFunction):
                 for box in targets[i]['boxes']:
                     draw.rectangle([int((box[0] - box[2]/2)*img_W), int((box[1] - box[3]/2)*img_H), 
                                     int((box[0] + box[2]/2)*img_W), int((box[1] + box[3]/2)*img_H)], outline=(255,255,0))
-                pilImage.save(self.vis_save + f'epoch{self.epoch}_' + str(i) + "_"+ str(len(targets[i]['boxes'])) +'.jpg')
+                # img_id = targets[i].get('image_id', i)
+                pilImage.save(self.vis_save + f"{i}.jpg")
 
         return images, targets
 

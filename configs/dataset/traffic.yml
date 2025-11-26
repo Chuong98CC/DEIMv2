@@ -12,10 +12,20 @@ train_dataloader:
   dataset:
     type: ConcatCocoDataset
     datasets: 
-    - img_folder: /data/murata_phase2/thai_vehicle_yolo/images/
-      ann_file: /data/murata_phase2/thai_vehicle_yolo/thai_vehicle_yolo.json
-    - img_folder: /data/murata_phase2/thai_vehicle_yolo/images/
-      ann_file: /data/murata_phase2/thai_vehicle_yolo/thai_vehicle_yolo.json
+    - img_folder: /hdd_data/safie_traffic/
+      ann_file: /hdd_data/safie_traffic/train.json
+    # - img_folder: /hdd_data/safie_traffic_p2/yolov7_detect/
+    #   ann_file: /hdd_data/safie_traffic_p2/yolov7_detect/annotations/train.json
+    # - img_folder: /data/
+    #   ann_file: /data/MIO-TCD-Localization/gt_train.json
+    # - img_folder: /data/murata_phase2/thai_vehicle_yolo/images/
+    #   ann_file: /data/murata_phase2/thai_vehicle_yolo/thai_vehicle_yolo.json
+    # - img_folder: /data/murata_phase2/2025_10_17_14/images/
+    #   ann_file: /data/murata_phase2/2025_10_17_14/annotations/2025_10_17_14_train.json
+    # - img_folder: /data/murata_phase2/2025_10_17_14/images/
+    #   ann_file: /data/murata_phase2/2025_10_14_01/annotations/2025_10_14_01_train.json
+    # - img_folder: /data/murata_phase2/2025_10_14_03/images/
+    #   ann_file: /data/murata_phase2/2025_10_14_03/annotations/2025_10_14_03_train.json
     return_masks: False
     transforms:
       type: Compose

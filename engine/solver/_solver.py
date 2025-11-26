@@ -112,15 +112,12 @@ class BaseSolver(object):
             self.load_resume_state(self.cfg.resume)
 
     def visualize_data_augmentation(self, num_batches=1):
-        train_dataloader = dist_utils.warp_loader(
-            self.cfg.train_dataloader, shuffle=self.cfg.train_dataloader.shuffle
-        )
         # for i in range(num_batches):
-        # batch = next(iter(train_dataloader))
-        for batch in train_dataloader:
-            num_batches -= 1
-            if num_batches == 0:
+        #     batch = next(iter(self.cfg.train_dataloader))
+        for i, batch in enumerate(self.cfg.train_dataloader):
+            if i >= num_batches:
                 break
+            images, targets = batch
             
     def eval(self):
         self._setup()
